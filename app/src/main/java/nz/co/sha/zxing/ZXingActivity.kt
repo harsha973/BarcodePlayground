@@ -14,23 +14,28 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.lifecycleScope
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.client.android.BeepManager
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
 import com.journeyapps.barcodescanner.BarcodeView
 import com.journeyapps.barcodescanner.DefaultDecoderFactory
+import com.journeyapps.barcodescanner.camera.CameraSettings
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import nz.co.sha.zxing.databinding.ActivityMainBinding
 import nz.co.sha.zxing.databinding.ActivityMlKitBinding
+import timber.log.Timber
 
-class MainActivity : AppCompatActivity() {
-    private var barcodeView: BarcodeView? = null
+class ZXingActivity : AppCompatActivity() {
+    //    private var barcodeView: BarcodeView? = null
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
 
     private val requestPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-                barcodeView?.resume()
+                binding.barCodeView.resume()
             }
         }
 
@@ -39,25 +44,23 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val beepManager = BeepManager(this)
-        barcodeView = BarcodeView(this)
-//        val formats = listOf(BarcodeFormat.QR_CODE)//, BarcodeFormat.AZTEC, BarcodeFormat.DATA_MATRIX)
-//        barcodeView?.decoderFactory = DefaultDecoderFactory(formats)
+//        barcodeView = BarcodeView(this)
+        val formats = listOf(BarcodeFormat.QR_CODE)//, BarcodeFormat.AZTEC, BarcodeFormat.DATA_MATRIX)
+        binding.barCodeView.decoderFactory = DefaultDecoderFactory(formats)
 
 
-        binding.contentFl.addView(barcodeView)
+//        binding.contentFl.addView(barcodeView)
 
-        val callback = object : BarcodeCallback {
-            override fun barcodeResult(result: BarcodeResult) {
-                Log.d("Result is", result.text)
-                if (result.text == null) {
-                    return
-                }
-                binding.decodedText.text = result.text
-                beepManager.playBeepSoundAndVibrate()
-            }
+        binding.barCodeView.decodeContinuous { result ->
+            Timber.d(result.text)
+            setResult(result.text)
+            beepManager.playBeepSoundAndVibrate()
         }
-        barcodeView?.decodeContinuous(callback)
-
+        binding.barCodeView.viewFinder.setLaserVisibility(false)
+        binding.barCodeView.cameraSettings.isAutoFocusEnabled = true
+//        binding.barCodeView.cameraSettings.isContinuousFocusEnabled = true
+        binding.barCodeView.cameraSettings.focusMode = CameraSettings.FocusMode.CONTINUOUS // th
+        binding.barCodeView.cameraSettings.isExposureEnabled
 //        IntentIntegrator(this).initiateScan()
     }
 
@@ -68,7 +71,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        barcodeView?.pause()
+        binding.barCodeView.pause()
+    }
+
+    private fun setResult(result: String) {
+        binding.decodedText.text = result
+        lifecycleScope.launch {
+            delay(5000)
+            if (binding.decodedText.text == result)
+                binding.decodedText.text = ""
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

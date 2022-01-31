@@ -1,20 +1,15 @@
 package nz.co.sha.zxing
 
 import android.Manifest
-import android.graphics.ImageFormat.YUV_420_888
 import android.os.Bundle
 import android.util.Log
-import android.util.Rational
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
-import androidx.camera.core.impl.ImageCaptureConfig
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.common.images.Size
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -23,9 +18,6 @@ import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nz.co.sha.zxing.databinding.ActivityMlKitBinding
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.impl.CaptureConfig
-
 
 class MLKitActivity : AppCompatActivity() {
 
@@ -71,7 +63,7 @@ class MLKitActivity : AppCompatActivity() {
             binding.resultTV.text = it
             lifecycleScope.launch {
                 delay(5000)
-                if(binding.resultTV.text == it)
+                if (binding.resultTV.text == it)
                     binding.resultTV.text = ""
             }
         }
@@ -95,15 +87,13 @@ class MLKitActivity : AppCompatActivity() {
             .build()
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), analyzer)
 
-        val camera = cameraProvider.bindToLifecycle(
+        return cameraProvider.bindToLifecycle(
             this as LifecycleOwner,
             cameraSelector,
             preview,
 //            imageCapture,
             imageAnalysis,
         )
-
-        return camera
     }
 }
 
