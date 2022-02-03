@@ -3,9 +3,12 @@ package nz.co.sha.zxing
 import android.Manifest
 import android.os.Bundle
 import android.util.Log
+import android.util.Rational
+import android.util.Size
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
+import androidx.camera.core.impl.ImageCaptureConfig
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -28,7 +31,6 @@ class MLKitActivity : AppCompatActivity() {
     private val requestPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-//                binding.previewView.resume()
             }
         }
 

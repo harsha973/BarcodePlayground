@@ -60,7 +60,6 @@ class ZXingActivity : AppCompatActivity() {
         binding.barCodeView.cameraSettings.isAutoFocusEnabled = true
 //        binding.barCodeView.cameraSettings.isContinuousFocusEnabled = true
         binding.barCodeView.cameraSettings.focusMode = CameraSettings.FocusMode.CONTINUOUS // th
-        binding.barCodeView.cameraSettings.isExposureEnabled
 //        IntentIntegrator(this).initiateScan()
     }
 
