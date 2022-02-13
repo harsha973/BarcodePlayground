@@ -28,7 +28,7 @@ import nz.co.sha.zxing.databinding.ActivityMainBinding
 import nz.co.sha.zxing.databinding.ActivityMlKitBinding
 import timber.log.Timber
 
-class ZXingActivity : AppCompatActivity() {
+class ZXingExternalActivity : AppCompatActivity() {
     //    private var barcodeView: BarcodeView? = null
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
 
@@ -45,8 +45,10 @@ class ZXingActivity : AppCompatActivity() {
 
         val beepManager = BeepManager(this)
 //        barcodeView = BarcodeView(this)
-        val formats = listOf(BarcodeFormat.QR_CODE, BarcodeFormat.AZTEC, BarcodeFormat.DATA_MATRIX)
+        binding.barCodeView.initializeFromIntent(intent)
+        val formats = listOf(BarcodeFormat.QR_CODE)//, BarcodeFormat.AZTEC, BarcodeFormat.DATA_MATRIX)
         binding.barCodeView.decoderFactory = DefaultDecoderFactory(formats)
+
 
 //        binding.contentFl.addView(barcodeView)
 
@@ -56,7 +58,6 @@ class ZXingActivity : AppCompatActivity() {
             beepManager.playBeepSoundAndVibrate()
         }
         binding.barCodeView.viewFinder.setLaserVisibility(false)
-
         binding.barCodeView.cameraSettings.isAutoFocusEnabled = true
 //        binding.barCodeView.cameraSettings.isContinuousFocusEnabled = true
         binding.barCodeView.cameraSettings.focusMode = CameraSettings.FocusMode.CONTINUOUS // th

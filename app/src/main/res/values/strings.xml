@@ -2,4 +2,5 @@
     <string name="app_name">ZxingDemo</string>
     <string name="zxing_library">ZXing library</string>
     <string name="ml_kit">ML Kit</string>
+    <string name="zxing_external_activity">ZXing External activity</string>
 </resources>

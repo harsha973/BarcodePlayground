@@ -1,18 +1,24 @@
 package nz.co.sha.zxing
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.util.Rational
 import android.util.Size
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.core.impl.ImageCaptureConfig
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -21,6 +27,9 @@ import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nz.co.sha.zxing.databinding.ActivityMlKitBinding
+import timber.log.Timber
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class MLKitActivity : AppCompatActivity() {
 
@@ -34,6 +43,7 @@ class MLKitActivity : AppCompatActivity() {
             }
         }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
@@ -41,8 +51,50 @@ class MLKitActivity : AppCompatActivity() {
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
-            bindPreview(cameraProvider)
+            val camera = bindPreview(cameraProvider)
+            binding.previewView.afterMeasured {
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        do {
+                            setAutoFocus(camera)
+                            delay(3000)
+                        } while (true)
+                    }
+                }
+
+//                binding.previewView.setOnTouchListener { _, event ->
+//                    return@setOnTouchListener when (event.action) {
+//                        MotionEvent.ACTION_DOWN -> {
+//                            true
+//                        }
+//                        MotionEvent.ACTION_UP -> {
+//                            val factory: MeteringPointFactory = SurfaceOrientedMeteringPointFactory(
+//                                binding.previewView.width.toFloat(), binding.previewView.height.toFloat()
+//                            )
+//                            val autoFocusPoint = factory.createPoint(event.x, event.y)
+//                            try {
+//                                Log.d("MlKit", "Focussing")
+//                                camera.cameraControl.startFocusAndMetering(
+//                                    FocusMeteringAction.Builder(
+//                                        autoFocusPoint,
+//                                        FocusMeteringAction.FLAG_AF
+//                                    ).apply {
+//                                        //focus only when the user tap the preview
+//                                        disableAutoCancel()
+//                                    }.build()
+//                                )
+//                            } catch (e: CameraInfoUnavailableException) {
+//                                Log.d("ERROR", "cannot access camera", e)
+//                            }
+//                            true
+//                        }
+//                        else -> false // Unhandled event.
+//                    }
+//                }
+            }
         }, ContextCompat.getMainExecutor(this))
+
+
     }
 
     override fun onResume() {
@@ -51,7 +103,6 @@ class MLKitActivity : AppCompatActivity() {
     }
 
     private fun bindPreview(cameraProvider: ProcessCameraProvider): Camera {
-
         val preview: Preview = Preview.Builder()
             .build().also {
                 it.setSurfaceProvider(binding.previewView.surfaceProvider)
@@ -87,7 +138,7 @@ class MLKitActivity : AppCompatActivity() {
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
 //            .setTargetResolution(android.util.Size(1080, 1920))
             .build()
-        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), analyzer)
+        imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), analyzer)
 
         return cameraProvider.bindToLifecycle(
             this as LifecycleOwner,
@@ -96,6 +147,24 @@ class MLKitActivity : AppCompatActivity() {
 //            imageCapture,
             imageAnalysis,
         )
+    }
+
+    private fun setAutoFocus(camera: Camera) {
+        val autoFocusPoint = SurfaceOrientedMeteringPointFactory(1f, 1f)
+            .createPoint(.5f, .5f)
+        try {
+            val autoFocusAction = FocusMeteringAction.Builder(
+                autoFocusPoint,
+                FocusMeteringAction.FLAG_AF
+            ).apply {
+                //  start cancel auto-focusing after 2 seconds
+//                disableAutoCancel()
+                setAutoCancelDuration(2, TimeUnit.SECONDS)
+            }.build()
+            camera.cameraControl.startFocusAndMetering(autoFocusAction)
+        } catch (e: CameraInfoUnavailableException) {
+            Timber.e("cannot access camera")
+        }
     }
 }
 
@@ -107,26 +176,43 @@ private class YourImageAnalyzer(private val callback: (String?) -> Unit) : Image
 
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            Log.d("Barcode", "Width is ${image.width}, Height is ${image.height}")
-            // Pass image to an ML Kit Vision API
-            // ...
-
-            val result = scanner.process(image)
-                .addOnSuccessListener { barcodes ->
-//                    Log.d("Barcodes", barcodes.toString())
-                    if(barcodes.isNotEmpty())
-                        callback(barcodes.first().rawValue)
-                }
-                .addOnFailureListener {
-                    // Task failed with an exception
-                    // ...
-                }
-                .addOnCompleteListener {
-                    imageProxy.close()
-                }
+        val mediaImage = imageProxy.image ?: kotlin.run {
+            imageProxy.close()
+            return
         }
+
+        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        // Pass image to an ML Kit Vision API
+        // ...
+
+        val result = scanner.process(image)
+            .addOnSuccessListener { barcodes ->
+//                    Log.d("Barcodes", barcodes.toString())
+                if (barcodes.isNotEmpty())
+                    callback(barcodes.first().rawValue)
+            }
+            .addOnFailureListener {
+                // Task failed with an exception
+                // ...
+            }
+            .addOnCompleteListener {
+                imageProxy.close()
+            }
     }
 }
+//
+//inline fun View.afterMeasured(crossinline block: () -> Unit) {
+//    if (measuredWidth > 0 && measuredHeight > 0) {
+//        block()
+//    } else {
+//        viewTreeObserver.addOnGlobalLayoutListener(object :
+//            ViewTreeObserver.OnGlobalLayoutListener {
+//            override fun onGlobalLayout() {
+//                if (measuredWidth > 0 && measuredHeight > 0) {
+//                    viewTreeObserver.removeOnGlobalLayoutListener(this)
+//                    block()
+//                }
+//            }
+//        })
+//    }
+//}
