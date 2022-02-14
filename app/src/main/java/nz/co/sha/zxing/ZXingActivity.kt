@@ -10,6 +10,7 @@ import com.google.zxing.integration.android.IntentResult
 
 import android.content.Intent
 import android.util.Log
+import android.util.TimeUtils
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,6 +28,7 @@ import kotlinx.coroutines.launch
 import nz.co.sha.zxing.databinding.ActivityMainBinding
 import nz.co.sha.zxing.databinding.ActivityMlKitBinding
 import timber.log.Timber
+import java.util.*
 
 class ZXingActivity : AppCompatActivity() {
     //    private var barcodeView: BarcodeView? = null
@@ -38,6 +40,8 @@ class ZXingActivity : AppCompatActivity() {
                 binding.barCodeView.resume()
             }
         }
+    private var timeInSeconds = 0L
+    private val allRecordedTimes = mutableListOf<Long>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,29 +50,42 @@ class ZXingActivity : AppCompatActivity() {
         val beepManager = BeepManager(this)
 //        barcodeView = BarcodeView(this)
         val formats = listOf(BarcodeFormat.QR_CODE, BarcodeFormat.AZTEC, BarcodeFormat.DATA_MATRIX)
-        binding.barCodeView.decoderFactory = DefaultDecoderFactory(formats)
 
-//        binding.contentFl.addView(barcodeView)
+        with(binding.barCodeView) {
+           decoderFactory = DefaultDecoderFactory(formats)
 
-        binding.barCodeView.decodeContinuous { result ->
-            Timber.d(result.text)
-            setResult(result.text)
-            beepManager.playBeepSoundAndVibrate()
+            decodeContinuous { result ->
+                timeInSeconds = (Date().time - timeInSeconds)/1000
+                binding.barCodeView.pause()
+
+                allRecordedTimes.add(timeInSeconds)
+                val median = allRecordedTimes.fold(0L){ acc, l -> acc + l}/allRecordedTimes.size
+
+                Timber.d(result.text)
+                setResult("Current seconds is $timeInSeconds \n" +
+                        "Median seconds is $median \n" +
+                        "\n" +
+                        "${result.text}")
+                beepManager.playBeepSoundAndVibrate()
+            }
+            viewFinder.setLaserVisibility(false)
+
+            cameraSettings.isAutoFocusEnabled = true
+            cameraSettings.focusMode = CameraSettings.FocusMode.CONTINUOUS // th
+            cameraSettings.isMeteringEnabled = true
+            cameraSettings.isExposureEnabled = true
+
+            binding.start.setOnClickListener {
+                timeInSeconds = Date().time
+                requestPermission.launch(Manifest.permission.CAMERA)
+            }
         }
-        binding.barCodeView.viewFinder.setLaserVisibility(false)
-
-        binding.barCodeView.cameraSettings.isAutoFocusEnabled = true
-//        binding.barCodeView.cameraSettings.isContinuousFocusEnabled = true
-        binding.barCodeView.cameraSettings.focusMode = CameraSettings.FocusMode.CONTINUOUS // th
-        binding.barCodeView.cameraSettings.isMeteringEnabled = true
-        binding.barCodeView.cameraSettings.isExposureEnabled = true
-//        IntentIntegrator(this).initiateScan()
     }
 
-    override fun onResume() {
-        super.onResume()
-        requestPermission.launch(Manifest.permission.CAMERA)
-    }
+//    override fun onResume() {
+//        super.onResume()
+//        requestPermission.launch(Manifest.permission.CAMERA)
+//    }
 
     override fun onPause() {
         super.onPause()

@@ -18,12 +18,32 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <ImageButton
-            android:id="@+id/flash"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_input_add"
-            android:padding="16dp"/>
+            android:layout_gravity="bottom"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/flash"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:src="@android:drawable/ic_input_add" />
+
+            <Space
+                android:layout_width="16dp"
+                android:layout_height="16dp" />
+
+            <ImageButton
+                android:id="@+id/start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:src="@android:drawable/ic_media_play" />
+
+        </LinearLayout>
+
     </FrameLayout>
 
     <TextView
