@@ -12,6 +12,8 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
 import androidx.activity.result.ActivityResultLauncher
+import com.google.android.libraries.barhopper.RecognitionOptions.AZTEC
+import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.ScanIntentResult
 
 
@@ -38,7 +40,7 @@ class LaunchActivity : AppCompatActivity() {
 
         register()
         binding.zxingExternalButton.setOnClickListener {
-            barcodeLauncher.launch(ScanOptions())
+            barcodeLauncher.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE, ScanOptions.DATA_MATRIX))
         }
     }
 
